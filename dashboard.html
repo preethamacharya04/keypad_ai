@@ -191,7 +191,17 @@
         </section>
 
         <section class="control-card">
-            <h3>2. Domain Trigger</h3>
+            <h3>2. City Selection</h3>
+            <div class="grid">
+                <button onclick="selectCity('bangalore')">📍 BANGALORE</button>
+                <button onclick="selectCity('mysore')">📍 MYSORE</button>
+                <button onclick="selectCity('mandya')">📍 MANDYA</button>
+                <button onclick="selectCity('hassan')">📍 HASSAN</button>
+            </div>
+        </section>
+
+        <section class="control-card">
+            <h3>3. Domain Trigger</h3>
             <div class="grid">
                 <button onclick="selectDomain('agriculture')">🌾 AGRICULTURE</button>
                 <button onclick="selectDomain('healthcare')">🏥 HEALTHCARE</button>
@@ -205,6 +215,77 @@
                 <button onclick="triggerAgri('pest_report')">🐛 PEST REPORT</button>
                 <button onclick="triggerAgri('sarkari_help')">📜 SARKARI HELP</button>
                 <button onclick="triggerAgri('power_sell')">🤝 POWER SELL</button>
+            </div>
+        </section>
+
+        <section id="market-response-card" class="control-card hidden">
+            <h3>3.1 Market Confirmation</h3>
+            <div class="grid">
+                <button class="btn-green" onclick="marketResponse('agree')">✅ AGREE</button>
+                <button class="btn-red" onclick="marketResponse('disagree')">❌ DISAGREE</button>
+            </div>
+        </section>
+
+        <section id="pest-menu-card" class="control-card hidden">
+            <h3>3.1 Pest Specifics</h3>
+            <div class="grid">
+                <button onclick="pestAction('yellow_leaves')">🍂 YELLOW LEAVES</button>
+                <button onclick="pestAction('root_rot')">🌱 ROOT ROT</button>
+                <button onclick="pestAction('worms')">🐛 WORMS</button>
+            </div>
+        </section>
+
+        <section id="acreage-card" class="control-card hidden">
+            <h3>3.2 Land Acreage</h3>
+            <div class="grid">
+                <button onclick="sarkariAction('small')">🚜 1 - 5 ACRES</button>
+                <button onclick="sarkariAction('large')">🚜 > 5 ACRES</button>
+            </div>
+        </section>
+
+        <section id="sarkari-final-card" class="control-card hidden">
+            <h3>3.3 Application Status</h3>
+            <div class="grid">
+                <button class="btn-green" onclick="sarkariFinal('agree')">✅ SUBMIT APPLICATION</button>
+                <button class="btn-red" onclick="sarkariFinal('disagree')">❌ CANCEL</button>
+            </div>
+        </section>
+
+        <section id="health-menu" class="control-card hidden">
+            <h3>3. Health Options</h3>
+            <div class="grid">
+                <button class="btn-yellow" onclick="healthAction('sugar')">🍬 SUGAR CARE</button>
+                <button onclick="healthAction('bp')">🩺 BP CARE</button>
+                <button onclick="healthAction('symptom')">🤒 SYMPTOM CHECKER</button>
+                <button class="btn-green" onclick="healthAction('medicine')">💊 MED REMINDER</button>
+            </div>
+        </section>
+
+        <section id="sugar-menu-card" class="control-card hidden">
+            <h3>3.1 Sugar Specifics</h3>
+            <div class="grid">
+                <button class="btn-yellow" onclick="sugarAction('low')">📉 < 70 (LOW)</button>
+                <button class="btn-green" onclick="sugarAction('normal')">✅ 70-130 (NORMAL)</button>
+                <button class="btn-red" onclick="sugarAction('high')">📈 > 130 (HIGH)</button>
+            </div>
+        </section>
+
+        <section id="bp-menu-card" class="control-card hidden">
+            <h3>3.1 Blood Pressure Specifics</h3>
+            <div class="grid">
+                <button class="btn-yellow" onclick="bpAction('low')">📉 < 90 (LOW)</button>
+                <button class="btn-green" onclick="bpAction('normal')">✅ 90-120 (NORMAL)</button>
+                <button class="btn-red" onclick="bpAction('high')">📈 > 120 (HIGH)</button>
+            </div>
+        </section>
+
+        <section id="symptom-menu-card" class="control-card hidden">
+            <h3>3.1 Symptom Specifics</h3>
+            <div class="grid">
+                <button onclick="symptomAction('fever')">🌡️ FEVER</button>
+                <button onclick="symptomAction('headache')">🤕 HEADACHE</button>
+                <button onclick="symptomAction('body_pain')">🧍 BODY PAIN</button>
+                <button onclick="symptomAction('cold_cough')">🤧 COLD & COUGH</button>
             </div>
         </section>
 
@@ -242,6 +323,10 @@
             log("Disconnected from server.");
         });
 
+        socket.on('status_update', (data) => {
+            log(data.msg);
+        });
+
         // ACTIONS
         function triggerStart() {
             socket.emit('trigger_start');
@@ -256,19 +341,104 @@
             log(`Language set to: ${lang.toUpperCase()}`);
         }
 
+        function selectCity(city) {
+            socket.emit('select_city', { city: city });
+            log(`City Selected: ${city.toUpperCase()}`);
+        }
+
         function selectDomain(domain) {
+            document.getElementById('agri-menu').classList.add('hidden');
+            document.getElementById('health-menu').classList.add('hidden');
+            document.getElementById('sugar-menu-card').classList.add('hidden');
+            document.getElementById('bp-menu-card').classList.add('hidden');
+            document.getElementById('symptom-menu-card').classList.add('hidden');
+
             if (domain === 'agriculture') {
                 document.getElementById('agri-menu').classList.remove('hidden');
-            } else {
-                document.getElementById('agri-menu').classList.add('hidden');
+            } else if (domain === 'healthcare') {
+                document.getElementById('health-menu').classList.remove('hidden');
             }
             socket.emit('select_domain', { domain: domain });
             log(`Domain Selected: ${domain}`);
         }
 
+        function healthAction(action) {
+            document.getElementById('sugar-menu-card').classList.add('hidden');
+            document.getElementById('bp-menu-card').classList.add('hidden');
+            document.getElementById('symptom-menu-card').classList.add('hidden');
+
+            if (action === 'sugar') {
+                document.getElementById('sugar-menu-card').classList.remove('hidden');
+            } else if (action === 'bp') {
+                document.getElementById('bp-menu-card').classList.remove('hidden');
+            } else if (action === 'symptom') {
+                document.getElementById('symptom-menu-card').classList.remove('hidden');
+            }
+            // Medicine doesn't have a submenu yet, it just triggers audio.
+            socket.emit('health_action', { action: action });
+            log(`Health Action: ${action.toUpperCase()}`);
+        }
+
+        function sugarAction(level) {
+            document.getElementById('sugar-menu-card').classList.add('hidden');
+            socket.emit('sugar_action', { level: level });
+            log(`Sugar Level Selected: ${level.toUpperCase()}`);
+        }
+
+        function bpAction(level) {
+            document.getElementById('bp-menu-card').classList.add('hidden');
+            socket.emit('bp_action', { level: level });
+            log(`BP Level Selected: ${level.toUpperCase()}`);
+        }
+
+        function symptomAction(symptom) {
+            document.getElementById('symptom-menu-card').classList.add('hidden');
+            socket.emit('symptom_action', { symptom: symptom });
+            log(`Symptom Selected: ${symptom.toUpperCase()}`);
+        }
+
         function triggerAgri(action) {
+            // Hide sub-menus first
+            document.getElementById('market-response-card').classList.add('hidden');
+            document.getElementById('pest-menu-card').classList.add('hidden');
+            document.getElementById('acreage-card').classList.add('hidden');
+            document.getElementById('sarkari-final-card').classList.add('hidden');
+
+            if (action === 'market_price') {
+                document.getElementById('market-response-card').classList.remove('hidden');
+            } else if (action === 'pest_report') {
+                document.getElementById('pest-menu-card').classList.remove('hidden');
+            } else if (action === 'sarkari_help') {
+                document.getElementById('acreage-card').classList.remove('hidden');
+            }
+            
             socket.emit('agri_action', { action: action });
             log(`Agri Action: ${action}`);
+        }
+
+        function marketResponse(response) {
+            document.getElementById('market-response-card').classList.add('hidden');
+            socket.emit('market_response', { response: response });
+            log(`Market Response: ${response.toUpperCase()}`);
+        }
+
+        function pestAction(problem) {
+            document.getElementById('pest-menu-card').classList.add('hidden');
+            socket.emit('pest_action', { problem: problem });
+            log(`Pest Action: ${problem.toUpperCase()}`);
+        }
+
+        function sarkariAction(acreage) {
+            document.getElementById('acreage-card').classList.add('hidden');
+            document.getElementById('sarkari-final-card').classList.remove('hidden');
+            socket.emit('sarkari_action', { acreage: acreage });
+            log(`Acreage Selected: ${acreage.toUpperCase()}`);
+        }
+
+        function sarkariFinal(decision) {
+            document.getElementById('sarkari-final-card').classList.add('hidden');
+            socket.emit('sarkari_final', { decision: decision });
+            log(`Scheme Decision: ${decision.toUpperCase()}`);
         }
 
         function triggerEmergency(level) {

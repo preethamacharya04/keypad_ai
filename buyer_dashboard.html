@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GARUDA SANKET | Buyer Portal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #10b981;
+            --secondary: #3b82f6;
+            --red: #ef4444;
+            --border: #334155;
+            --terminal-bg: #0b1120;
+            --terminal-text: #34d399;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background: var(--card);
+            border-radius: 12px 12px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 { margin: 0; font-size: 1.2rem; color: var(--text); }
+        .status-badge { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
+        #status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); }
+        .online #status-dot { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
+
+        #inbox {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 0 0 12px 12px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .empty-state { text-align: center; color: var(--text-muted); font-style: italic; padding: 40px 20px; }
+
+        .email-card {
+            background: #1e293b;
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.4s ease-out forwards;
+            overflow: hidden;
+            border-top: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .email-header {
+            padding: 15px 20px;
+            padding-bottom: 5px;
+        }
+
+        .email-meta {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .email-title {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #ffffff;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .email-body {
+            padding: 0 20px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .terminal-box {
+            background: var(--terminal-bg);
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--terminal-text);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-top: 10px;
+        }
+
+        .privacy-box {
+            border: 1px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .privacy-title {
+            color: #60a5fa;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+
+        .privacy-text {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin: 0;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: opacity 0.2s;
+            color: white;
+        }
+        
+        .btn:hover { opacity: 0.9; }
+        .btn-accept { background-color: var(--primary); }
+        .btn-pass { background-color: var(--red); }
+        .btn-finalized {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            width: 100%;
+            cursor: default;
+        }
+        .btn-finalized:hover { opacity: 1; }
+    </style>
+</head>
+
+<body class="offline" id="body-status">
+    <div class="container">
+        <header>
+            <h1>💼 Buyer Inbox</h1>
+            <div class="status-badge">
+                <span id="status-text">OFFLINE</span>
+                <div id="status-dot"></div>
+            </div>
+        </header>
+
+        <div id="inbox">
+            <div class="empty-state" id="empty-state">
+                📭 No new deals yet. Waiting for farmers to agree to market prices...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const inbox = document.getElementById('inbox');
+        const emptyState = document.getElementById('empty-state');
+
+        socket.on('connect', () => {
+            document.getElementById('body-status').className = 'online';
+            document.getElementById('status-text').innerText = "ONLINE";
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('body-status').className = 'offline';
+            document.getElementById('status-text').innerText = "OFFLINE";
+        });
+
+        socket.on('buyer_email_alert', (data) => {
+            // Hide empty state if it exists
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+
+            // Create new email card
+            const time = new Date().toLocaleTimeString([], {hour: 'numeric', minute:'2-digit', second:'2-digit'});
+            const refId = 'GS-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 900 + 100) + 'S';
+            const city = data.city || 'Unknown Location';
+            const ext = Math.floor(Math.random() * 9000 + 1000);
+
+            const card = document.createElement('div');
+            card.className = 'email-card';
+            
+            card.innerHTML = `
+                <div class="email-header">
+                    <div class="email-meta">
+                        <span>From: secure-proxy@garudasanket.ai</span>
+                        <span>${time.toLowerCase()}</span>
+                    </div>
+                    <h3 class="email-title">NEW DEAL SECURED: ${city}</h3>
+                </div>
+                <div class="email-body">
+                    <div class="terminal-box">
+                        REFERENCE ID : ${refId}<br>
+                        LOCATION : ${city}<br>
+                        LOCKED AT : ₹${data.price}
+                    </div>
+
+                    <div class="privacy-box">
+                        <div class="privacy-title">
+                            🛡️ PRIVACY CALL BRIDGE ACTIVE:
+                        </div>
+                        <p class="privacy-text">
+                            To contact the farmer, please dial <strong>1800-GARUDA-AI</strong> and enter extension <strong>${ext}</strong>. The farmer's direct number is encrypted for their safety.
+                        </p>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-accept" onclick="this.parentElement.innerHTML = '<button class=\\'btn btn-finalized\\' disabled>✅ DEAL FINALIZED - AWAITING PICKUP</button>'">✅ ACCEPT & CALL</button>
+                        <button class="btn btn-pass" onclick="this.parentElement.parentElement.parentElement.remove()">❌ PASS</button>
+                    </div>
+                </div>
+            `;
+
+            // Insert at the top of the inbox
+            inbox.insertBefore(card, inbox.firstChild);
+        });
+    </script>
+</body>
+
+</html>
